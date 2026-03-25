@@ -8,6 +8,7 @@
     "dev": "nodemon src/server.js",
     "create-admin": "node src/scripts/createAdmin.js",
     "migrate:cloudinary": "node src/scripts/migrateProductImagesToCloudinary.js",
+    "upload:virtual-videos": "node src/scripts/uploadVirtualVideosToCloudinary.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
