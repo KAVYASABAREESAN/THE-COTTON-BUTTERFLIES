@@ -33,18 +33,37 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
+const normalizeOrigin = (value) => {
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+
+  return value.trim().replace(/\/+$/, '');
+};
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
+  ...(process.env.FRONTEND_URL || '')
+    .split(',')
+    .map(normalizeOrigin)
+    .filter(Boolean),
+  normalizeOrigin(process.env.NETLIFY_URL),
   'http://localhost:3000',
   'http://localhost:3001',
-  'http://localhost:3002'
-].filter(Boolean);
+  'http://localhost:3002',
+  'https://thecottonbutterfliespvt.netlify.app'
+]
+  .map(normalizeOrigin)
+  .filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    const normalizedOrigin = normalizeOrigin(origin);
+
+    if (!origin || allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
+
+    console.error('CORS blocked for origin:', origin, 'Allowed origins:', allowedOrigins);
     return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
