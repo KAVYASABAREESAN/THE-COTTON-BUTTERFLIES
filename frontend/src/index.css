@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-primary: #ec4899;
+  }
+
+  body {
+    @apply bg-primary-yellow text-text-dark font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply text-gray-900 bg-white;
+  }
+
+  option {
+    @apply text-gray-900 bg-white;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-gray-500;
+  }
+}
+
+/* Force readable form control contrast across admin/customer pages. */
+input,
+textarea,
+select,
+option {
+  color: #111827 !important;
+  background-color: #ffffff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1;
+}
+
+input[type='file'] {
+  color: #111827 !important;
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply text-text-dark font-medium py-3 px-6 rounded-md transition-colors duration-200;
+    background-color: var(--brand-primary);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(0.95);
+  }
+  
+  .btn-secondary {
+    @apply bg-accent-blue hover:bg-blue-200 text-text-dark font-medium py-3 px-6 rounded-md transition-colors duration-200;
+  }
+  
+  /* Cards */
+  .product-card {
+    @apply bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden;
+  }
+  
+  /* Inputs */
+  .input-field {
+    @apply w-full px-4 py-2 border border-border-light rounded-md focus:outline-none focus:ring-2 focus:ring-accent-pink focus:border-transparent;
+  }
+  
+  /* Navigation */
+  .nav-link {
+    @apply text-text-light hover:text-text-dark transition-colors duration-200;
+  }
+  
+  .nav-link.active {
+    @apply text-text-dark font-medium;
+  }
+  
+  /* Layout */
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Sections */
+  .section-padding {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+}
+
+body.theme-dark {
+  @apply bg-gray-950;
+}
+
+body.font-serif-theme {
+  font-family: 'Playfair Display', serif;
+}
+
+body.font-sans-theme {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-primary-yellow;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-accent-pink rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-pink-300;
+}

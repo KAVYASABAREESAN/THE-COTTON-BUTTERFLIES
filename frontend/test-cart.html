@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Cart</title>
+</head>
+<body>
+    <h1>Test Cart API</h1>
+    
+    <div>
+        <h2>Step 1: Login</h2>
+        <input type="email" id="email" value="keerthana@gmail.com" placeholder="Email">
+        <input type="password" id="password" value="yourpassword" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <div id="loginResult"></div>
+    </div>
+
+    <div>
+        <h2>Step 2: Get Products</h2>
+        <button onclick="getProducts()">Get Products</button>
+        <div id="products"></div>
+    </div>
+
+    <div>
+        <h2>Step 3: Add to Cart</h2>
+        <input type="text" id="productId" placeholder="Product ID">
+        <input type="number" id="quantity" value="1" placeholder="Quantity">
+        <button onclick="addToCart()">Add to Cart</button>
+        <div id="cartResult"></div>
+    </div>
+
+    <div>
+        <h2>Step 4: View Cart</h2>
+        <button onclick="getCart()">Get Cart</button>
+        <div id="cart"></div>
+    </div>
+
+    <script>
+        let token = '';
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const res = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                document.getElementById('loginResult').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                if (data.status === 'success') {
+                    token = data.data.token;
+                    localStorage.setItem('token', token);
+                }
+            } catch (err) {
+                document.getElementById('loginResult').innerHTML = 'Error: ' + err.message;
+            }
+        }
+
+        async function getProducts() {
+            try {
+                const res = await fetch('http://localhost:5000/api/products');
+                const data = await res.json();
+                let html = '<ul>';
+                data.data.forEach(p => {
+                    html += `<li><strong>${p.name}</strong> - ID: ${p._id} - Price: ₹${p.price}</li>`;
+                });
+                html += '</ul>';
+                document.getElementById('products').innerHTML = html;
+            } catch (err) {
+                document.getElementById('products').innerHTML = 'Error: ' + err.message;
+            }
+        }
+
+        async function addToCart() {
+            const productId = document.getElementById('productId').value;
+            const quantity = document.getElementById('quantity').value;
+            
+            try {
+                const res = await fetch('http://localhost:5000/api/cart/items', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ productId, quantity: parseInt(quantity) })
+                });
+                const data = await res.json();
+                document.getElementById('cartResult').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (err) {
+                document.getElementById('cartResult').innerHTML = 'Error: ' + err.message;
+            }
+        }
+
+        async function getCart() {
+            try {
+                const res = await fetch('http://localhost:5000/api/cart', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                document.getElementById('cart').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (err) {
+                document.getElementById('cart').innerHTML = 'Error: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>

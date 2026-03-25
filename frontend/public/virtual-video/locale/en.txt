@@ -1,0 +1,27 @@
+#: locale=en
+
+## Media
+
+### 360 Video
+
+### Title
+media_E8A00A3D_F17E_905C_41DA_B0415DF55474.label = vid1
+media_E7B877DF_F17E_BFDB_41D2_8F8EC283B0C6.label = vid2
+media_E7BA925A_F17E_9024_41C7_F3484DA811BA.label = vid3
+
+### Video
+videores_EB315F2F_F16A_907B_41DE_079D0AE08B84.url = media/media_E7B877DF_F17E_BFDB_41D2_8F8EC283B0C6_en.mp4
+videores_EB315F2F_F16A_907B_41DE_079D0AE08B84.posterURL = media/media_E7B877DF_F17E_BFDB_41D2_8F8EC283B0C6_poster_en.jpg
+videores_EB17A8A0_F15A_9064_41E0_536CA2EEFA98.url = media/media_E7BA925A_F17E_9024_41C7_F3484DA811BA_en.mp4
+videores_EB17A8A0_F15A_9064_41E0_536CA2EEFA98.posterURL = media/media_E7BA925A_F17E_9024_41C7_F3484DA811BA_poster_en.jpg
+videores_E9E9CE24_F176_906D_41EB_3F16EB144D78.url = media/media_E8A00A3D_F17E_905C_41DA_B0415DF55474_en.mp4
+videores_E9E9CE24_F176_906D_41EB_3F16EB144D78.posterURL = media/media_E8A00A3D_F17E_905C_41DA_B0415DF55474_poster_en.jpg
+
+### Video Subtitles
+
+## Tour
+
+### Description
+
+### Title
+tour.name = cotton butterflies 2
