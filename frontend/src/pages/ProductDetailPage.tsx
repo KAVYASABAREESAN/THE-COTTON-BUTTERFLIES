@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Heart, Share2, Truck, Shield, Star, ChevronLeft, ChevronRight, ShoppingBag, ArrowLeft, Sparkles } from 'lucide-react';
+import { Heart, Share2, Truck, Shield, Star, ChevronRight, ShoppingBag, ArrowLeft, Sparkles } from 'lucide-react';
 import { useAppDispatch } from '../store/hooks';
 import { setCart } from '../store/slices/cartSlice';
 import ProductReviews from '../components/products/ProductReviews';
@@ -43,7 +43,6 @@ const ProductDetailPage: React.FC = () => {
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
-  const [activeTab, setActiveTab] = useState<'details' | 'reviews' | 'shipping'>('details');
   const [isZoomActive, setIsZoomActive] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
   const [isPreviewToolOpen, setIsPreviewToolOpen] = useState(false);
@@ -69,30 +68,11 @@ const ProductDetailPage: React.FC = () => {
   const { settings } = usePublicSettings();
   const currencySymbol = settings.payment.currencySymbol || '₹';
 
-  // Fetch product data
-  useEffect(() => {
-    if (id) {
-      fetchProduct();
+  const fetchProduct = useCallback(async () => {
+    if (!id) {
+      return;
     }
-  }, [id]);
 
-  useEffect(() => {
-    if (!uploadedImage) return;
-
-    const refreshPattern = async () => {
-      await loadPatternTexture(selectedPatternIndex);
-      redrawMaskedPreview();
-    };
-
-    refreshPattern();
-  }, [selectedPatternIndex, uploadedImage]);
-
-  useEffect(() => {
-    if (!uploadedImage) return;
-    redrawMaskedPreview();
-  }, [overlayOpacity, uploadedImage]);
-
-  const fetchProduct = async () => {
     try {
       setLoading(true);
       const response = await productService.getProductById(id!);
@@ -106,32 +86,14 @@ const ProductDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Handle loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
-      </div>
-    );
-  }
-
-  // Handle error or no product
-  if (error || !product) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-serif font-light mb-6">
-            {error || 'Product Not Found'}
-          </h1>
-          <Link to="/shop" className="btn-primary">Back to Shop</Link>
-        </div>
-      </div>
-    );
-  }
+  }, [id]);
 
   const handleAddToCart = async () => {
+    if (!product) {
+      showErrorToast(new Error('Product details are not available yet.'));
+      return false;
+    }
+
     if (settings.product.sizeSelectionEnabled && product.sizes.length > 0 && !selectedSize) {
       showErrorToast(new Error('Please select a size'));
       return false;
@@ -178,7 +140,7 @@ const ProductDetailPage: React.FC = () => {
     }
   };
 
-  const drawFallbackTexture = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  const drawFallbackTexture = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
     ctx.fillStyle = 'rgba(196, 158, 112, 0.28)';
     ctx.fillRect(0, 0, width, height);
 
@@ -190,7 +152,7 @@ const ProductDetailPage: React.FC = () => {
       ctx.lineTo(x + height, height);
       ctx.stroke();
     }
-  };
+  }, []);
 
   const loadImage = (src: string): Promise<HTMLImageElement> =>
     new Promise((resolve, reject) => {
@@ -201,8 +163,8 @@ const ProductDetailPage: React.FC = () => {
       img.src = src;
     });
 
-  const loadPatternTexture = async (patternIndex: number) => {
-    const patternSrc = product.images?.[patternIndex];
+  const loadPatternTexture = useCallback(async (patternIndex: number) => {
+    const patternSrc = product?.images?.[patternIndex];
     if (!patternSrc) {
       patternImageRef.current = null;
       return;
@@ -213,9 +175,9 @@ const ProductDetailPage: React.FC = () => {
     } catch {
       patternImageRef.current = null;
     }
-  };
+  }, [product?.images]);
 
-  const redrawMaskedPreview = () => {
+  const redrawMaskedPreview = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -254,9 +216,9 @@ const ProductDetailPage: React.FC = () => {
     ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(overlayCanvas, 0, 0);
     ctx.restore();
-  };
+  }, [drawFallbackTexture, overlayOpacity]);
 
-  const initializePreviewCanvas = async (uploadedImageSrc: string) => {
+  const initializePreviewCanvas = useCallback(async (uploadedImageSrc: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -300,7 +262,53 @@ const ProductDetailPage: React.FC = () => {
     } finally {
       setIsGeneratingPreview(false);
     }
-  };
+  }, [loadPatternTexture, redrawMaskedPreview, selectedPatternIndex]);
+
+  // Fetch product data
+  useEffect(() => {
+    if (id) {
+      fetchProduct();
+    }
+  }, [fetchProduct, id]);
+
+  useEffect(() => {
+    if (!uploadedImage) return;
+
+    const refreshPattern = async () => {
+      await loadPatternTexture(selectedPatternIndex);
+      redrawMaskedPreview();
+    };
+
+    refreshPattern();
+  }, [loadPatternTexture, redrawMaskedPreview, selectedPatternIndex, uploadedImage]);
+
+  useEffect(() => {
+    if (!uploadedImage) return;
+    redrawMaskedPreview();
+  }, [overlayOpacity, redrawMaskedPreview, uploadedImage]);
+
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+      </div>
+    );
+  }
+
+  // Handle error or no product
+  if (error || !product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-3xl font-serif font-light mb-6">
+            {error || 'Product Not Found'}
+          </h1>
+          <Link to="/shop" className="btn-primary">Back to Shop</Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -329,7 +337,7 @@ const ProductDetailPage: React.FC = () => {
   };
 
   const handleDownloadPreview = () => {
-    if (!canvasRef.current || !isPreviewReady) return;
+    if (!canvasRef.current || !isPreviewReady || !product) return;
 
     const safeName = product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     try {

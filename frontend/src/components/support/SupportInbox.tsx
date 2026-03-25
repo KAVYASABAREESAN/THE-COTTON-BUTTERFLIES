@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { BellRing, LifeBuoy, MessageSquareText } from 'lucide-react';
 import { supportService } from '../../services/api';
 
@@ -30,7 +30,7 @@ const SupportInbox: React.FC<SupportInboxProps> = ({ onUnreadCountChange }) => {
 
   const unreadCount = messages.filter((item) => item.adminReply?.message && !item.replyViewedAt).length;
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       setLoading(true);
       const response = await supportService.getMyMessages();
@@ -44,11 +44,11 @@ const SupportInbox: React.FC<SupportInboxProps> = ({ onUnreadCountChange }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [onUnreadCountChange]);
 
   useEffect(() => {
     fetchMessages();
-  }, []);
+  }, [fetchMessages]);
 
   useEffect(() => {
     onUnreadCountChange?.(unreadCount);

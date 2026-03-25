@@ -37,6 +37,20 @@ const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const resolveImageUrl = useCallback((image?: string) => {
+    if (!image) return '';
+    if (image.startsWith('http://') || image.startsWith('https://') || image.startsWith('data:')) {
+      return image;
+    }
+    if (image.startsWith('/uploads/')) {
+      return `${BACKEND_ORIGIN}${image}`;
+    }
+    if (image.startsWith('uploads/')) {
+      return `${BACKEND_ORIGIN}/${image}`;
+    }
+    return image;
+  }, []);
+
   const getFallbackData = useCallback((): Product[] => {
     return [
       {
@@ -193,21 +207,7 @@ const HomePage: React.FC = () => {
     };
 
     fetchLatestCategoryImages();
-  }, []);
-
-  const resolveImageUrl = useCallback((image?: string) => {
-    if (!image) return '';
-    if (image.startsWith('http://') || image.startsWith('https://') || image.startsWith('data:')) {
-      return image;
-    }
-    if (image.startsWith('/uploads/')) {
-      return `${BACKEND_ORIGIN}${image}`;
-    }
-    if (image.startsWith('uploads/')) {
-      return `${BACKEND_ORIGIN}/${image}`;
-    }
-    return image;
-  }, []);
+  }, [resolveImageUrl]);
 
   if (loading) {
     return (

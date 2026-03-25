@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertCircle,
@@ -80,9 +80,30 @@ const MyOrdersPage: React.FC = () => {
   const [orderReviewMap, setOrderReviewMap] = useState<Record<string, OrderReviewEntry>>({});
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
 
+  const fetchOrders = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await orderService.getMyOrders(currentPage);
+      if (response.status === 'success') {
+        setOrders(response.data);
+        setTotalPages(response.pages);
+        if (selectedOrder) {
+          const latestSelected = (response.data || []).find((o: Order) => o._id === selectedOrder._id);
+          if (latestSelected) {
+            setSelectedOrder(latestSelected);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, selectedOrder]);
+
   useEffect(() => {
     fetchOrders();
-  }, [currentPage]);
+  }, [fetchOrders]);
 
   useEffect(() => {
     const onFocusOrVisible = () => {
@@ -105,7 +126,7 @@ const MyOrdersPage: React.FC = () => {
       window.removeEventListener('focus', onFocusOrVisible);
       document.removeEventListener('visibilitychange', onFocusOrVisible);
     };
-  }, [currentPage]);
+  }, [fetchOrders]);
 
   useEffect(() => {
     const loadOrderReviews = async () => {
@@ -133,27 +154,6 @@ const MyOrdersPage: React.FC = () => {
 
     loadOrderReviews();
   }, [selectedOrder, settings.review.reviewsEnabled, settings.review.starRatingEnabled]);
-
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await orderService.getMyOrders(currentPage);
-      if (response.status === 'success') {
-        setOrders(response.data);
-        setTotalPages(response.pages);
-        if (selectedOrder) {
-          const latestSelected = (response.data || []).find((o: Order) => o._id === selectedOrder._id);
-          if (latestSelected) {
-            setSelectedOrder(latestSelected);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {

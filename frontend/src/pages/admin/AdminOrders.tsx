@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Eye, 
   Truck, 
@@ -7,7 +7,6 @@ import {
   Clock,
   Package,
   Search,
-  Filter,
   ChevronLeft,
   ChevronRight,
   RefreshCw
@@ -72,12 +71,7 @@ const AdminOrders: React.FC = () => {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [trackingUrl, setTrackingUrl] = useState('');
 
-  useEffect(() => {
-    fetchOrders();
-    fetchStats();
-  }, [currentPage, filter, searchTerm]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const params: any = {
@@ -98,9 +92,9 @@ const AdminOrders: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, filter, searchTerm]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await orderService.getOrderStats();
       if (response.status === 'success') {
@@ -109,7 +103,12 @@ const AdminOrders: React.FC = () => {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+    fetchStats();
+  }, [fetchOrders, fetchStats]);
 
   const handleStatusUpdate = async (orderId: string) => {
     try {

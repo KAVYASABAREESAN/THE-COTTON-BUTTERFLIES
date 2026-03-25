@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Edit, 
@@ -10,8 +10,6 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { useProducts } from '../../context/ProductContext';
-import { productService } from '../../services/api';
-
 const AdminProducts: React.FC = () => {
   const navigate = useNavigate();
   const { products, loading, error, refreshProducts, deleteProduct } = useProducts();
@@ -22,9 +20,13 @@ const AdminProducts: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
+  const reloadProducts = useCallback(() => {
     refreshProducts();
-  }, []);
+  }, [refreshProducts]);
+
+  useEffect(() => {
+    reloadProducts();
+  }, [reloadProducts]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -73,7 +75,7 @@ const AdminProducts: React.FC = () => {
         <h2 className="text-xl font-medium mb-2">Error Loading Products</h2>
         <p className="mb-4">{error}</p>
         <button
-          onClick={refreshProducts}
+          onClick={reloadProducts}
           className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
         >
           Try Again

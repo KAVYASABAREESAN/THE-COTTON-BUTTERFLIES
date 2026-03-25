@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 declare global {
   interface Window {
@@ -98,6 +98,76 @@ const JewelryTryOn: React.FC = () => {
   const [status, setStatus] = useState('Starting webcam and face tracking...');
   const [error, setError] = useState<string | null>(null);
 
+  const drawAccessory = (
+    ctx: CanvasRenderingContext2D,
+    image: HTMLImageElement | null,
+    centerX: number,
+    centerY: number,
+    width: number,
+    height: number
+  ) => {
+    if (!image) {
+      return;
+    }
+
+    ctx.drawImage(image, centerX - width / 2, centerY - height / 2, width, height);
+  };
+
+  const drawResults = useCallback((results: FaceMeshResults) => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas) {
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+
+    const width = video.videoWidth || 960;
+    const height = video.videoHeight || 720;
+
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    ctx.clearRect(0, 0, width, height);
+
+    const landmarks = results.multiFaceLandmarks?.[0];
+    if (!landmarks) {
+      setStatus('Face not detected. Center your face in the frame.');
+      return;
+    }
+
+    setStatus('Tracking face. Jewelry is following your movement.');
+
+    const toPoint = (index: number) => ({
+      x: landmarks[index].x * width,
+      y: landmarks[index].y * height
+    });
+
+    const chin = toPoint(152);
+    const jawLeft = toPoint(234);
+    const jawRight = toPoint(454);
+
+    const faceWidth = Math.abs(jawRight.x - jawLeft.x);
+    const necklaceWidth = Math.max(faceWidth * 1.15, 220);
+    const necklaceHeight = necklaceWidth * 0.75;
+
+    drawAccessory(ctx, necklaceImageRef.current, chin.x, chin.y + necklaceHeight * 0.38, necklaceWidth, necklaceHeight);
+
+    if (window.drawLandmarks) {
+      window.drawLandmarks(ctx, [landmarks[234], landmarks[454], landmarks[152]], {
+        color: '#f43f5e',
+        fillColor: '#f43f5e',
+        radius: 2
+      });
+    }
+  }, []);
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -169,7 +239,7 @@ const JewelryTryOn: React.FC = () => {
       cameraRef.current?.stop?.();
       faceMeshRef.current?.close?.();
     };
-  }, []);
+  }, [drawResults, selectedNecklace.src]);
 
   useEffect(() => {
     loadImage(selectedNecklace.src)
@@ -183,77 +253,6 @@ const JewelryTryOn: React.FC = () => {
       });
   }, [selectedNecklace]);
 
-  const drawAccessory = (
-    ctx: CanvasRenderingContext2D,
-    image: HTMLImageElement | null,
-    centerX: number,
-    centerY: number,
-    width: number,
-    height: number
-  ) => {
-    if (!image) {
-      return;
-    }
-
-    ctx.drawImage(image, centerX - width / 2, centerY - height / 2, width, height);
-  };
-
-  const drawResults = (results: FaceMeshResults) => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (!video || !canvas) {
-      return;
-    }
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      return;
-    }
-
-    const width = video.videoWidth || 960;
-    const height = video.videoHeight || 720;
-
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
-
-    ctx.clearRect(0, 0, width, height);
-
-    const landmarks = results.multiFaceLandmarks?.[0];
-    if (!landmarks) {
-      setStatus('Face not detected. Center your face in the frame.');
-      return;
-    }
-
-    setStatus('Tracking face. Jewelry is following your movement.');
-
-    const toPoint = (index: number) => ({
-      x: landmarks[index].x * width,
-      y: landmarks[index].y * height
-    });
-
-    // Chin placement uses landmark 152, the center-bottom point of the chin.
-    // The necklace is drawn below this point to simulate resting on the neck.
-    const chin = toPoint(152);
-    const jawLeft = toPoint(234);
-    const jawRight = toPoint(454);
-
-    const faceWidth = Math.abs(jawRight.x - jawLeft.x);
-    const necklaceWidth = Math.max(faceWidth * 1.15, 220);
-    const necklaceHeight = necklaceWidth * 0.75;
-
-    drawAccessory(ctx, necklaceImageRef.current, chin.x, chin.y + necklaceHeight * 0.38, necklaceWidth, necklaceHeight);
-
-    if (window.drawLandmarks) {
-      window.drawLandmarks(ctx, [landmarks[234], landmarks[454], landmarks[152]], {
-        color: '#f43f5e',
-        fillColor: '#f43f5e',
-        radius: 2
-      });
-    }
-  };
 
   return (
     <div className="w-full max-w-5xl rounded-[2rem] border border-rose-100 bg-white/90 p-6 shadow-[0_20px_60px_rgba(190,24,93,0.12)] backdrop-blur">

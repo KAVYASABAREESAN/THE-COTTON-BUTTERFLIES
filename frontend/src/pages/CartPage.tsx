@@ -10,7 +10,7 @@ const CHECKOUT_SELECTION_KEY = 'checkoutSelection';
 const CartPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { items, total, itemCount } = useAppSelector((state) => state.cart);
+  const { items, itemCount } = useAppSelector((state) => state.cart);
   const [loadingItems, setLoadingItems] = useState<Record<string, boolean>>({});
   const [selectedItemKeys, setSelectedItemKeys] = useState<string[]>([]);
 

@@ -134,9 +134,9 @@ const AdminLogin: React.FC = () => {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-pink-600 hover:text-pink-500">
+              <button type="button" className="font-medium text-pink-600 hover:text-pink-500">
                 Forgot password?
-              </a>
+              </button>
             </div>
           </div>
 

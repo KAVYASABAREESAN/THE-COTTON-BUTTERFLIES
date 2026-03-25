@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { showErrorToast } from '../../utils/toast';
 
 declare global {
@@ -298,156 +298,6 @@ const DressTryOnCamera: React.FC<DressTryOnCameraProps> = ({
   const [status, setStatus] = useState('Starting body camera...');
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!selectedImage) {
-      setError('No dress image available for try-on.');
-      onAvailabilityChange?.(false);
-      return;
-    }
-
-    let cancelled = false;
-    let localStream: MediaStream | null = null;
-
-    const initialize = async () => {
-      try {
-        setError(null);
-        onAvailabilityChange?.(false);
-        setStatus('Loading body tracking...');
-        await Promise.all(SCRIPT_URLS.map(ensureScript));
-        garmentImageRef.current = await loadImage(selectedImage);
-
-        if (cancelled) {
-          return;
-        }
-
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error('This browser does not support webcam access.');
-        }
-
-        if (!window.Pose || !videoRef.current) {
-          throw new Error('MediaPipe Pose failed to load.');
-        }
-
-        const pose = new window.Pose({
-          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-        });
-
-        pose.setOptions({
-          modelComplexity: 1,
-          smoothLandmarks: true,
-          enableSegmentation: false,
-          minDetectionConfidence: 0.6,
-          minTrackingConfidence: 0.6
-        });
-
-        pose.onResults((results: PoseResults) => {
-          drawResults(results);
-        });
-
-        poseRef.current = pose;
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: 'user',
-            width: { ideal: 960 },
-            height: { ideal: 1280 }
-          }
-        });
-
-        if (cancelled) {
-          stopMediaStream(stream);
-          return;
-        }
-
-        localStream = stream;
-        mediaStreamRef.current = stream;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-
-        if (cancelled) {
-          videoRef.current.pause();
-          videoRef.current.srcObject = null;
-          stopMediaStream(stream);
-          return;
-        }
-
-        const processFrame = async () => {
-          if (!videoRef.current || !poseRef.current || cancelled) {
-            return;
-          }
-
-          if (videoRef.current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-            await poseRef.current.send({ image: videoRef.current });
-          }
-
-          animationFrameRef.current = window.requestAnimationFrame(() => {
-            processFrame().catch((frameError) => {
-              console.error('[DressTryOnCamera] frame:error', frameError);
-            });
-          });
-        };
-
-        await processFrame();
-        setStatus('Body camera ready. Step back so your full outfit is visible.');
-        onAvailabilityChange?.(true);
-      } catch (cameraError: any) {
-        console.error('[DressTryOnCamera] initialize:error', cameraError);
-        if (!cancelled) {
-          const friendlyMessage =
-            cameraError?.name === 'NotFoundError' || cameraError?.name === 'DevicesNotFoundError'
-              ? 'No camera was found. Connect or enable a webcam and try again.'
-              : cameraError?.name === 'NotAllowedError'
-                ? 'Camera access was blocked. Please allow camera permission and try again.'
-                : cameraError?.name === 'NotReadableError' || cameraError?.name === 'AbortError'
-                  ? 'The camera is busy or could not be started. Close other apps or tabs using the camera and try again.'
-                  : cameraError?.message || 'Unable to start the dress try-on camera.';
-          setError(friendlyMessage);
-          setStatus('Body try-on unavailable.');
-          onAvailabilityChange?.(false);
-          showErrorToast(cameraError, friendlyMessage);
-        }
-      }
-    };
-
-    initialize();
-
-    return () => {
-      cancelled = true;
-      poseRef.current?.close?.();
-      poseRef.current = null;
-      if (animationFrameRef.current !== null) {
-        window.cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      if (videoRef.current) {
-        videoRef.current.pause();
-        videoRef.current.srcObject = null;
-      }
-      stopMediaStream(localStream);
-      stopMediaStream(mediaStreamRef.current);
-      mediaStreamRef.current = null;
-      smoothedMetricsRef.current = null;
-    };
-  }, [onAvailabilityChange, selectedImage]);
-
-  useEffect(() => {
-    if (!selectedImage) {
-      return;
-    }
-
-    loadImage(selectedImage)
-      .then((image) => {
-        garmentImageRef.current = image;
-      })
-      .catch((imageError) => {
-        console.error('[DressTryOnCamera] selectedImage:error', imageError);
-        setError('Unable to process the selected dress image.');
-        onAvailabilityChange?.(false);
-        showErrorToast(imageError, 'Unable to process the selected dress image.');
-      });
-  }, [onAvailabilityChange, selectedImage]);
-
   const drawGarment = (
     ctx: CanvasRenderingContext2D,
     image: HTMLImageElement,
@@ -464,7 +314,7 @@ const DressTryOnCamera: React.FC<DressTryOnCameraProps> = ({
     ctx.restore();
   };
 
-  const drawResults = (results: PoseResults) => {
+  const drawResults = useCallback((results: PoseResults) => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const garmentImage = garmentImageRef.current;
@@ -562,7 +412,159 @@ const DressTryOnCamera: React.FC<DressTryOnCameraProps> = ({
     const centerY = metrics.upperChest.y + metrics.garmentHeight * (0.5 - profile.necklineOffset);
 
     drawGarment(ctx, garmentImage, centerX, centerY, garmentWidth, metrics.garmentHeight, metrics.rotation);
-  };
+  }, [garmentType, scale]);
+
+  useEffect(() => {
+    if (!selectedImage) {
+      setError('No dress image available for try-on.');
+      onAvailabilityChange?.(false);
+      return;
+    }
+
+    let cancelled = false;
+    let localStream: MediaStream | null = null;
+    const mountedVideoElement = videoRef.current;
+
+    const initialize = async () => {
+      try {
+        setError(null);
+        onAvailabilityChange?.(false);
+        setStatus('Loading body tracking...');
+        await Promise.all(SCRIPT_URLS.map(ensureScript));
+        garmentImageRef.current = await loadImage(selectedImage);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('This browser does not support webcam access.');
+        }
+
+        const videoElement = videoRef.current;
+        if (!window.Pose || !videoElement) {
+          throw new Error('MediaPipe Pose failed to load.');
+        }
+
+        const pose = new window.Pose({
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+        });
+
+        pose.setOptions({
+          modelComplexity: 1,
+          smoothLandmarks: true,
+          enableSegmentation: false,
+          minDetectionConfidence: 0.6,
+          minTrackingConfidence: 0.6
+        });
+
+        pose.onResults((results: PoseResults) => {
+          drawResults(results);
+        });
+
+        poseRef.current = pose;
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: 'user',
+            width: { ideal: 960 },
+            height: { ideal: 1280 }
+          }
+        });
+
+        if (cancelled) {
+          stopMediaStream(stream);
+          return;
+        }
+
+        localStream = stream;
+        mediaStreamRef.current = stream;
+        videoElement.srcObject = stream;
+        await videoElement.play();
+
+        if (cancelled) {
+          videoElement.pause();
+          videoElement.srcObject = null;
+          stopMediaStream(stream);
+          return;
+        }
+
+        const processFrame = async () => {
+          if (!videoRef.current || !poseRef.current || cancelled) {
+            return;
+          }
+
+          if (videoRef.current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+            await poseRef.current.send({ image: videoRef.current });
+          }
+
+          animationFrameRef.current = window.requestAnimationFrame(() => {
+            processFrame().catch((frameError) => {
+              console.error('[DressTryOnCamera] frame:error', frameError);
+            });
+          });
+        };
+
+        await processFrame();
+        setStatus('Body camera ready. Step back so your full outfit is visible.');
+        onAvailabilityChange?.(true);
+      } catch (cameraError: any) {
+        console.error('[DressTryOnCamera] initialize:error', cameraError);
+        if (!cancelled) {
+          const friendlyMessage =
+            cameraError?.name === 'NotFoundError' || cameraError?.name === 'DevicesNotFoundError'
+              ? 'No camera was found. Connect or enable a webcam and try again.'
+              : cameraError?.name === 'NotAllowedError'
+                ? 'Camera access was blocked. Please allow camera permission and try again.'
+                : cameraError?.name === 'NotReadableError' || cameraError?.name === 'AbortError'
+                  ? 'The camera is busy or could not be started. Close other apps or tabs using the camera and try again.'
+                  : cameraError?.message || 'Unable to start the dress try-on camera.';
+          setError(friendlyMessage);
+          setStatus('Body try-on unavailable.');
+          onAvailabilityChange?.(false);
+          showErrorToast(cameraError, friendlyMessage);
+        }
+      }
+    };
+
+    initialize();
+
+    return () => {
+      cancelled = true;
+      poseRef.current?.close?.();
+      poseRef.current = null;
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      if (mountedVideoElement) {
+        mountedVideoElement.pause();
+        mountedVideoElement.srcObject = null;
+      }
+      stopMediaStream(localStream);
+      stopMediaStream(mediaStreamRef.current);
+      mediaStreamRef.current = null;
+      smoothedMetricsRef.current = null;
+    };
+  }, [drawResults, onAvailabilityChange, selectedImage]);
+
+  useEffect(() => {
+    if (!selectedImage) {
+      return;
+    }
+
+    loadImage(selectedImage)
+      .then((image) => {
+        garmentImageRef.current = image;
+      })
+      .catch((imageError) => {
+        console.error('[DressTryOnCamera] selectedImage:error', imageError);
+        setError('Unable to process the selected dress image.');
+        onAvailabilityChange?.(false);
+        showErrorToast(imageError, 'Unable to process the selected dress image.');
+      });
+  }, [onAvailabilityChange, selectedImage]);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-gray-950 p-3 shadow-inner">

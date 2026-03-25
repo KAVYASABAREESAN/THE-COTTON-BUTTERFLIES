@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAppSelector } from '../../store/hooks';
 import { productService } from '../../services/api';
 import ReviewList from './ReviewList';
@@ -30,7 +30,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
     'Go to My Orders to review this product after delivery.'
   );
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
       const response = await productService.getProductReviews(productId);
@@ -47,11 +47,11 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId]);
 
   useEffect(() => {
     fetchReviews();
-  }, [productId]);
+  }, [fetchReviews]);
 
   if (!settings.review.reviewsEnabled) {
     return (

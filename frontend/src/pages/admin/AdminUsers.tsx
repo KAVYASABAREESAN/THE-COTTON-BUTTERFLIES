@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Shield, UserX, UserCheck, Mail, Calendar } from 'lucide-react';
 import { userService } from '../../services/api';
 
@@ -22,7 +22,7 @@ const AdminUsers: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const params: any = {};
@@ -39,11 +39,11 @@ const AdminUsers: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [roleFilter, searchTerm, statusFilter]);
 
   useEffect(() => {
     fetchUsers();
-  }, [searchTerm, roleFilter, statusFilter]);
+  }, [fetchUsers]);
 
   const toggleUserStatus = async (user: User) => {
     try {
